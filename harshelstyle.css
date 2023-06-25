@@ -1,0 +1,35 @@
+body {
+    border: 8px solid;
+    text-align: center;
+    
+    background-color: rgb(202, 184, 245);
+}
+
+input{
+    border: solid 3px;
+    margin: 3px;
+    border: solid 3px;
+    font-size: medium;
+}
+
+button{
+    border: 3px solid;
+    background-color:aqua;
+    margin: 3px;
+    width: 100px;
+    border: solid 3px;
+    font-size: medium;
+    padding:7px;
+    border-radius: 50px; 
+}
+
+#result{
+    background-color: azure;
+    font-size: large;
+    border-radius: 20px;
+
+}
+
+#calculate{
+    background-color:aqua;
+}
