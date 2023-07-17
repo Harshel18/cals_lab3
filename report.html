@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <style>
+        p {
+            color: black;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .requirements-box {
+            border: 1px solid ;
+            padding: 10px;
+            margin: 20px;
+            background-color: yellow;
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        li {
+            color: 222;
+            font-size: 16px;
+        }
+    </style>
+
+    {% if password_passed %}
+        {% set message = "The password meets all the requirements." %}
+    {% else %}
+        {% set message = "The password does not meet the following requirements:" %}
+    {% endif %}
+    <div class="requirements-box">
+        <p>{{ message }}</p>
+        <ul>
+            {% for requirement in missing_requirements %}
+                <li>{{ requirement }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock %}
