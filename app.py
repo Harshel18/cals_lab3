@@ -1,45 +1,94 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key_here'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'  # SQLite database named users.db
+db = SQLAlchemy(app)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
 
-@app.route('/report', methods=['POST'])
-def report():
-    username = request.form.get('username')
-    password = request.form.get('password')
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-    password_requirements = {
-        'Lowercase': check_lowercase(password),
-        'Uppercase': check_uppercase(password),
-        'Ends with Digit': check_ends_with_digit(password),
-        'Length >= 8': check_length(password)
-    }
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
-    password_passed = all(password_requirements.values())
-    missing_requirements = get_missing_requirements(password_requirements)
+    def __init__(self, first_name, last_name, email, password):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.set_password(password)
 
-    return render_template('report.html', username=username, password_passed=password_passed, missing_requirements=missing_requirements)
+    def __repr__(self):
+        return f"<User {self.email}>"
+    
+with app.app_context():
+    db.create_all()
+    
+def is_valid_password(password, confirm_password):
+    if password != confirm_password:
+        flash('Passwords do not match. Please try again.', 'error')
+        return False
+    elif len(password) < 8:
+        flash('Password should be at least 8 characters long.', 'error')
+        return False
+    return True
 
-def check_lowercase(password):
-    return any(char.islower() for char in password)
+def is_existing_user(email):
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        flash('Email already exists. Please try a different email.', 'error')
+        return True
+    return False
 
-def check_uppercase(password):
-    return any(char.isupper() for char in password)
+@app.route('/signin', methods=['GET', 'POST'])
+def signin():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
 
-def check_ends_with_digit(password):
-    return password[-1].isdigit()
+        user = User.query.filter_by(email=email).first()
 
-def check_length(password):
-    return len(password) >= 8
+        if user and user.check_password(password):
+            return redirect(url_for('secret_page'))
+        else:
+            flash('Invalid email or password. Please try again.', 'error')
 
+    return render_template('signin.html')
 
-def get_missing_requirements(password_requirements):
-    return [requirement for requirement, passed in password_requirements.items() if not passed]
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
 
+        if is_valid_password(password, confirm_password) and not is_existing_user(email):
+            # Create a new user and add it to the database
+            new_user = User(first_name=first_name, last_name=last_name, email=email, password=password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful. You can now sign in.', 'success')
+            return redirect(url_for('thank_you'))
 
+    return render_template('signup.html')
 
-if __name__ == '__main__':
+@app.route('/secret', methods=['GET'])
+def secret_page():
+    return render_template('secretPage.html')
+
+@app.route('/thankyou', methods=['GET'])
+def thank_you():
+    return render_template('thankyou.html')
+
+if __name__ == "__main__":
     app.run(debug=True)
